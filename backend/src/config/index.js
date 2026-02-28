@@ -42,7 +42,7 @@ module.exports = {
     },
 
     storage: {
-        defaultLimit: 15 * 1024 * 1024 * 1024, // 15 GB in bytes
+        defaultLimit: 20 * 1024 * 1024, // 20 MB in bytes
         maxFileSize: 100 * 1024 * 1024, // 100 MB
     },
 

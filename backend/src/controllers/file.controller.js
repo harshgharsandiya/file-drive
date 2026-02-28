@@ -41,12 +41,14 @@ exports.renameFile = asyncHandler(async (req, res) => {
     const file = await fileService.renameFile(
         req.user.id,
         req.params.fileId,
-        req.body.name
+        req.body.name,
+        req.isOwner !== false // true if owner or flag not set
     )
     success(res, file, 'File renamed')
 })
 
 exports.moveFile = asyncHandler(async (req, res) => {
+    // moveFile is owner-only (RBAC enforces), but pass flag for consistency
     const file = await fileService.moveFile(
         req.user.id,
         req.params.fileId,
@@ -61,12 +63,20 @@ exports.deleteFile = asyncHandler(async (req, res) => {
 })
 
 exports.toggleStar = asyncHandler(async (req, res) => {
-    const file = await fileService.toggleStar(req.user.id, req.params.fileId)
+    const file = await fileService.toggleStar(
+        req.user.id,
+        req.params.fileId,
+        req.isOwner !== false
+    )
     success(res, file, file.isStarred ? 'File starred' : 'File unstarred')
 })
 
 exports.duplicateFile = asyncHandler(async (req, res) => {
-    const file = await fileService.duplicateFile(req.user.id, req.params.fileId)
+    const file = await fileService.duplicateFile(
+        req.user.id,
+        req.params.fileId,
+        req.isOwner !== false
+    )
     success(res, file, 'File duplicated', 201)
 })
 
@@ -74,7 +84,8 @@ exports.updateDescription = asyncHandler(async (req, res) => {
     const file = await fileService.updateDescription(
         req.user.id,
         req.params.fileId,
-        req.body.description
+        req.body.description,
+        req.isOwner !== false
     )
     success(res, file, 'Description updated')
 })
@@ -83,7 +94,8 @@ exports.updateLabels = asyncHandler(async (req, res) => {
     const file = await fileService.updateLabels(
         req.user.id,
         req.params.fileId,
-        req.body.labels
+        req.body.labels,
+        req.isOwner !== false
     )
     success(res, file, 'Labels updated')
 })

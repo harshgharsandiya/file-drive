@@ -222,3 +222,31 @@ exports.deleteAccount = async (userId, password) => {
     user.deletedAt = new Date()
     await user.save()
 }
+
+/**
+ * Delete all user's files and folders (drive wipe)
+ * @param {string} userId
+ * @returns {Promise<{filesDeleted: number, foldersDeleted: number}>}
+ */
+exports.deleteDrive = async (userId) => {
+    const now = new Date()
+
+    const [fileResult, folderResult] = await Promise.all([
+        File.updateMany(
+            { ownerId: userId, isDeleted: false },
+            { isDeleted: true, deletedAt: now }
+        ),
+        Folder.updateMany(
+            { ownerId: userId, isDeleted: false },
+            { isDeleted: true, deletedAt: now }
+        ),
+    ])
+
+    // Reset storage usage
+    await User.findByIdAndUpdate(userId, { storageUsed: 0 })
+
+    return {
+        filesDeleted: fileResult.modifiedCount,
+        foldersDeleted: folderResult.modifiedCount,
+    }
+}

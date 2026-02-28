@@ -6,6 +6,7 @@ import {
     uploadAvatar,
     changePassword,
     getStorageBreakdown,
+    deleteDrive,
 } from '../../services/drive.service'
 import { formatFileSize } from '../../utils/fileIcons'
 import toast from 'react-hot-toast'
@@ -25,6 +26,11 @@ export default function Profile() {
         confirmPassword: '',
     })
     const [changingPassword, setChangingPassword] = useState(false)
+
+    // Delete drive modal state
+    const [deleteDriveStep, setDeleteDriveStep] = useState(0) // 0=closed, 1=warn, 2=confirm
+    const [deleteConfirmText, setDeleteConfirmText] = useState('')
+    const [deletingDrive, setDeletingDrive] = useState(false)
 
     useEffect(() => {
         fetchData()
@@ -112,6 +118,24 @@ export default function Profile() {
         }
     }
 
+    const handleDeleteDrive = async () => {
+        if (deleteConfirmText !== 'DELETE') return
+        setDeletingDrive(true)
+        try {
+            await deleteDrive()
+            toast.success('All files and folders have been deleted')
+            setDeleteDriveStep(0)
+            setDeleteConfirmText('')
+            // Refresh storage info
+            const storageRes = await getStorageBreakdown()
+            setStorage(storageRes.data.data)
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Failed to delete drive')
+        } finally {
+            setDeletingDrive(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
@@ -121,7 +145,7 @@ export default function Profile() {
     }
 
     const storagePercent = storage
-        ? Math.min(100, (storage.totalUsed / storage.storageLimit) * 100)
+        ? Math.min(100, (storage.storageUsed / storage.storageLimit) * 100)
         : 0
 
     return (
@@ -194,7 +218,7 @@ export default function Profile() {
                     </h2>
                     <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
                         <span>
-                            {formatFileSize(storage.totalUsed)} of{' '}
+                            {formatFileSize(storage.storageUsed ?? 0)} of{' '}
                             {formatFileSize(storage.storageLimit)} used
                         </span>
                         <span>{storagePercent.toFixed(1)}%</span>
@@ -213,22 +237,27 @@ export default function Profile() {
                     </div>
 
                     {/* Breakdown */}
-                    {storage.breakdown && storage.breakdown.length > 0 && (
-                        <div className="space-y-2">
-                            {storage.breakdown.map((cat) => (
-                                <div
-                                    key={cat.category}
-                                    className="flex items-center justify-between text-sm"
-                                >
-                                    <span className="text-gray-600 capitalize">
-                                        {cat.category}
-                                    </span>
-                                    <span className="text-gray-500">
-                                        {formatFileSize(cat.totalSize)} (
-                                        {cat.count} files)
-                                    </span>
-                                </div>
-                            ))}
+                    {storage.categories && (
+                        <div className="space-y-2 mt-2">
+                            {Object.entries(storage.categories)
+                                .filter(([, size]) => size > 0)
+                                .sort(([, a], [, b]) => b - a)
+                                .map(([cat, size]) => (
+                                    <div
+                                        key={cat}
+                                        className="flex items-center justify-between text-sm"
+                                    >
+                                        <span className="text-gray-600 capitalize">
+                                            {cat}
+                                        </span>
+                                        <span className="text-gray-500">
+                                            {formatFileSize(size)}
+                                            {storage.counts?.[cat]
+                                                ? ` (${storage.counts[cat]} files)`
+                                                : ''}
+                                        </span>
+                                    </div>
+                                ))}
                         </div>
                     )}
                 </div>
@@ -302,6 +331,122 @@ export default function Profile() {
                     </button>
                 </form>
             </div>
+
+            {/* Danger Zone — Delete Drive */}
+            <div className="bg-white border border-red-200 rounded-xl p-6 mt-6">
+                <h2 className="text-lg font-semibold text-red-700 mb-1">
+                    Danger Zone
+                </h2>
+                <p className="text-sm text-gray-500 mb-4">
+                    Permanently delete all your files and folders. This cannot
+                    be undone.
+                </p>
+                <button
+                    onClick={() => setDeleteDriveStep(1)}
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
+                >
+                    Delete Entire Drive
+                </button>
+            </div>
+
+            {/* Delete Drive Modal — Step 1: Warning */}
+            {deleteDriveStep === 1 && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                    onClick={() => setDeleteDriveStep(0)}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                                <span className="text-red-600 text-xl">⚠️</span>
+                            </div>
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Delete Entire Drive?
+                            </h2>
+                        </div>
+                        <p className="text-sm text-gray-600 mb-4">
+                            This will permanently delete{' '}
+                            <strong>all your files and folders</strong>. This
+                            action <strong>cannot be undone</strong> and your
+                            storage will be reset to 0.
+                        </p>
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setDeleteDriveStep(0)}
+                                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={() => setDeleteDriveStep(2)}
+                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition cursor-pointer"
+                            >
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Drive Modal — Step 2: Type DELETE */}
+            {deleteDriveStep === 2 && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+                    onClick={() => {
+                        setDeleteDriveStep(0)
+                        setDeleteConfirmText('')
+                    }}
+                >
+                    <div
+                        className="bg-white rounded-xl shadow-xl w-full max-w-md p-6"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2">
+                            Confirm Deletion
+                        </h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Type <strong>DELETE</strong> to confirm you want to
+                            wipe your entire drive.
+                        </p>
+                        <input
+                            type="text"
+                            autoFocus
+                            value={deleteConfirmText}
+                            onChange={(e) =>
+                                setDeleteConfirmText(e.target.value)
+                            }
+                            placeholder="Type DELETE"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none mb-5"
+                        />
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => {
+                                    setDeleteDriveStep(0)
+                                    setDeleteConfirmText('')
+                                }}
+                                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteDrive}
+                                disabled={
+                                    deleteConfirmText !== 'DELETE' ||
+                                    deletingDrive
+                                }
+                                className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                            >
+                                {deletingDrive
+                                    ? 'Deleting...'
+                                    : 'Delete Everything'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

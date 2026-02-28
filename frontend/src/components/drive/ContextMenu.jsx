@@ -56,10 +56,16 @@ export default function ContextMenu({ x, y, item, type, onAction, onClose }) {
         return () => document.removeEventListener('mousedown', handleClick)
     }, [onClose])
 
-    // Keep menu in viewport
+    // Keep menu in viewport — 8 items * ~36px + header ~40px ≈ 330px
+    const menuHeight = items.length * 36 + 50
+    const menuWidth = 200
     const style = {
-        top: Math.min(y, window.innerHeight - 300),
-        left: Math.min(x, window.innerWidth - 200),
+        top:
+            y + menuHeight > window.innerHeight
+                ? Math.max(0, y - menuHeight)
+                : y,
+        left:
+            x + menuWidth > window.innerWidth ? Math.max(0, x - menuWidth) : x,
     }
 
     const items = menuItems[type] || []

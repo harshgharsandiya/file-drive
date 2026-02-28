@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { formatDistanceToNow } from 'date-fns'
 import { HiOutlineBell, HiOutlineCheck, HiOutlineTrash } from 'react-icons/hi'
 import {
@@ -21,6 +21,7 @@ export default function Notifications() {
     const [loading, setLoading] = useState(true)
     const [page, setPage] = useState(1)
     const [pagination, setPagination] = useState(null)
+    const autoMarkedRef = useRef(false)
 
     useEffect(() => {
         fetchNotifications()
@@ -30,8 +31,22 @@ export default function Notifications() {
         setLoading(true)
         try {
             const { data } = await getNotifications({ page, limit: 30 })
-            setNotifications(data.data || [])
+            const notifs = data.data || []
+            setNotifications(notifs)
             setPagination(data.pagination)
+
+            // Auto-mark all as read on first load of this page visit
+            if (!autoMarkedRef.current && notifs.some((n) => !n.read)) {
+                autoMarkedRef.current = true
+                try {
+                    await markAllNotificationsRead()
+                    setNotifications((prev) =>
+                        prev.map((n) => ({ ...n, read: true }))
+                    )
+                } catch {
+                    // silently ignore auto-mark errors
+                }
+            }
         } catch (err) {
             toast.error('Failed to load notifications')
         } finally {

@@ -127,12 +127,12 @@ exports.uploadFile = async (userId, file, { folderId, clientId }) => {
  * @param {string} newName
  * @returns {Promise<Object>}
  */
-exports.renameFile = async (userId, fileId, newName) => {
-    const file = await File.findOne({
-        _id: fileId,
-        ownerId: userId,
-        isDeleted: false,
-    })
+exports.renameFile = async (userId, fileId, newName, isOwner = true) => {
+    // RBAC middleware already validated permission; if not owner, skip ownerId filter
+    const query = isOwner
+        ? { _id: fileId, ownerId: userId, isDeleted: false }
+        : { _id: fileId, isDeleted: false }
+    const file = await File.findOne(query)
     if (!file) throw new AppError('File not found', 404)
 
     const oldName = file.name
@@ -202,12 +202,11 @@ exports.moveFile = async (userId, fileId, newFolderId) => {
  * @param {string} fileId
  * @returns {Promise<Object>}
  */
-exports.toggleStar = async (userId, fileId) => {
-    const file = await File.findOne({
-        _id: fileId,
-        ownerId: userId,
-        isDeleted: false,
-    })
+exports.toggleStar = async (userId, fileId, isOwner = true) => {
+    const query = isOwner
+        ? { _id: fileId, ownerId: userId, isDeleted: false }
+        : { _id: fileId, isDeleted: false }
+    const file = await File.findOne(query)
     if (!file) throw new AppError('File not found', 404)
 
     file.isStarred = !file.isStarred
@@ -249,12 +248,11 @@ exports.getStarredFiles = async (userId, { page = 1, limit = 50 }) => {
  * @param {string} fileId
  * @returns {Promise<Object>}
  */
-exports.duplicateFile = async (userId, fileId) => {
-    const file = await File.findOne({
-        _id: fileId,
-        ownerId: userId,
-        isDeleted: false,
-    })
+exports.duplicateFile = async (userId, fileId, isOwner = true) => {
+    const query = isOwner
+        ? { _id: fileId, ownerId: userId, isDeleted: false }
+        : { _id: fileId, isDeleted: false }
+    const file = await File.findOne(query)
     if (!file) throw new AppError('File not found', 404)
 
     const ext = path.extname(file.name)
@@ -339,12 +337,16 @@ exports.getFileInfo = async (userId, fileId) => {
  * @param {string} description
  * @returns {Promise<Object>}
  */
-exports.updateDescription = async (userId, fileId, description) => {
-    const file = await File.findOne({
-        _id: fileId,
-        ownerId: userId,
-        isDeleted: false,
-    })
+exports.updateDescription = async (
+    userId,
+    fileId,
+    description,
+    isOwner = true
+) => {
+    const query = isOwner
+        ? { _id: fileId, ownerId: userId, isDeleted: false }
+        : { _id: fileId, isDeleted: false }
+    const file = await File.findOne(query)
     if (!file) throw new AppError('File not found', 404)
 
     file.description = description
@@ -439,12 +441,11 @@ exports.getFilesByType = async (userId, category, { page = 1, limit = 50 }) => {
  * @param {Array<string>} labels
  * @returns {Promise<Object>}
  */
-exports.updateLabels = async (userId, fileId, labels) => {
-    const file = await File.findOne({
-        _id: fileId,
-        ownerId: userId,
-        isDeleted: false,
-    })
+exports.updateLabels = async (userId, fileId, labels, isOwner = true) => {
+    const query = isOwner
+        ? { _id: fileId, ownerId: userId, isDeleted: false }
+        : { _id: fileId, isDeleted: false }
+    const file = await File.findOne(query)
     if (!file) throw new AppError('File not found', 404)
 
     file.labels = labels

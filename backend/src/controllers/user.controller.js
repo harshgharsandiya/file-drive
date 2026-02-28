@@ -45,3 +45,12 @@ exports.deleteAccount = asyncHandler(async (req, res) => {
     await userService.deleteAccount(req.user.id, req.body.password)
     success(res, null, 'Account deactivated')
 })
+
+exports.deleteDrive = asyncHandler(async (req, res) => {
+    const result = await userService.deleteDrive(req.user.id)
+    success(
+        res,
+        result,
+        `Drive cleared: ${result.filesDeleted} files and ${result.foldersDeleted} folders deleted`
+    )
+})

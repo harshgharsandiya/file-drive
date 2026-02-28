@@ -50,4 +50,6 @@ router.post(
     c.deleteAccount
 )
 
+router.delete('/drive', auth, c.deleteDrive)
+
 module.exports = router
