@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider } from './contexts/AuthContext'
+import { OfflineProvider } from './contexts/OfflineContext'
 import ProtectedRoute from './components/ProtectedRoute'
 
 // Layouts
@@ -27,6 +28,7 @@ import Profile from './pages/profile/Profile'
 export default function App() {
     return (
         <AuthProvider>
+            <OfflineProvider>
             <BrowserRouter>
                 <Routes>
                     {/* Public routes */}
@@ -66,6 +68,7 @@ export default function App() {
                 </Routes>
             </BrowserRouter>
             <Toaster position="bottom-right" />
+            </OfflineProvider>
         </AuthProvider>
     )
 }

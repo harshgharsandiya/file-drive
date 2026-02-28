@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useOffline } from '../contexts/OfflineContext'
 import { getUnreadCount, getStorageBreakdown } from '../services/drive.service'
 import { formatFileSize } from '../utils/fileIcons'
 import {
@@ -16,6 +17,8 @@ import {
     HiOutlineUser,
     HiOutlineChevronLeft,
     HiOutlineChevronRight,
+    HiOutlineRefresh,
+    HiOutlineWifi,
 } from 'react-icons/hi'
 
 const navItems = [
@@ -32,6 +35,7 @@ export default function DashboardLayout() {
     const navigate = useNavigate()
     const location = useLocation()
     const searchRef = useRef(null)
+    const { isOnline, pendingCount, isSyncing, drain } = useOffline()
     const [sidebarOpen, setSidebarOpen] = useState(false) // mobile slide-in
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // desktop collapse
     const [searchQuery, setSearchQuery] = useState('')
@@ -327,6 +331,45 @@ export default function DashboardLayout() {
                         <HiOutlineUser className="w-5 h-5" />
                     </button>
                 </header>
+
+                {/* Offline banner */}
+                {!isOnline && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-slate-100 text-sm">
+                        <HiOutlineWifi className="w-4 h-4 shrink-0 opacity-60" />
+                        <span className="flex-1">
+                            You&apos;re <strong>offline</strong>. File uploads are paused. Other changes will be queued and synced automatically when you reconnect.
+                        </span>
+                        {pendingCount > 0 && (
+                            <span className="shrink-0 px-2 py-0.5 rounded-full bg-slate-600 text-xs font-semibold">
+                                {pendingCount} queued
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Syncing banner */}
+                {isOnline && (isSyncing || pendingCount > 0) && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm">
+                        <HiOutlineRefresh
+                            className={`w-4 h-4 shrink-0 ${
+                                isSyncing ? 'animate-spin' : ''
+                            }`}
+                        />
+                        <span className="flex-1">
+                            {isSyncing
+                                ? `Syncing ${pendingCount} queued operation${pendingCount !== 1 ? 's' : ''}…`
+                                : `${pendingCount} operation${pendingCount !== 1 ? 's' : ''} pending sync.`}
+                        </span>
+                        {!isSyncing && (
+                            <button
+                                onClick={drain}
+                                className="shrink-0 px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-xs font-semibold transition cursor-pointer"
+                            >
+                                Sync now
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Page content */}
                 <main className="flex-1 overflow-auto p-4 lg:p-6">
